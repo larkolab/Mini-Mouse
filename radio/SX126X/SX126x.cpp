@@ -1,14 +1,14 @@
 /*
 
-  __  __ _       _                                 
- |  \/  (_)     (_)                                
- | \  / |_ _ __  _ _ __ ___   ___  _   _ ___  ___  
+  __  __ _       _
+ |  \/  (_)     (_)
+ | \  / |_ _ __  _ _ __ ___   ___  _   _ ___  ___
  | |\/| | | '_ \| | '_ ` _ \ / _ \| | | / __|/ _ \
- | |  | | | | | | | | | | | | (_) | |_| \__ \  __/ 
- |_|  |_|_|_| |_|_|_| |_| |_|\___/ \__,_|___/\___| 
-                                                   
-                                                   
-Description       : LoraWan Phy Layer objets.  
+ | |  | | | | | | | | | | | | (_) | |_| \__ \  __/
+ |_|  |_|_|_| |_|_|_| |_| |_|\___/ \__,_|___/\___|
+
+
+Description       : LoraWan Phy Layer objets.
 
 
 License           : Revised BSD License, see LICENSE.TXT file include in the project
@@ -44,7 +44,9 @@ Maintainer        : Olivier Gimenez (SEMTECH)
 /************************************************************************************************
  *                                 Public  Methods                                              *
  ************************************************************************************************/
-const uint8_t SX126x::LoraSyncword[2] = {0x34, 0x44};
+const uint8_t SX126x::LoraSyncword[2] =  {0x34, 0x44};
+//const uint8_t SX126x::LoraSyncword[2] =  {0x14, 0x24};
+const uint8_t SX126x::LoraSyncword_LowSF[2] =  {0x14, 0x24};
 
 SX126x::SX126x( PinName Busy, PinName nss, PinName reset, PinName Interrupt ):
 pinBusy( Busy ),
@@ -72,7 +74,7 @@ void SX126x::FetchPayloadLora(
                     ) {
 
     uint8_t offset = 0;
-    
+
     GetRxBufferStatus( payloadSize, &offset );
     ReadBuffer( offset, payload, *payloadSize );
     GetPacketStatusLora( NULL, snr, signalRssi );
@@ -91,7 +93,7 @@ void SX126x::FetchPayloadFsk(
 IrqFlags_t SX126x::GetIrqFlagsLora( void ) {
     uint8_t irqStatus[2];
     IrqFlags_t irqFlags = RADIO_IRQ_NONE;
-    
+
     // Read IRQ status
     ReadCommand( GET_IRQ_STATUS, irqStatus, 2 );
     // Parse it
@@ -105,12 +107,12 @@ IrqFlags_t SX126x::GetIrqFlagsLora( void ) {
     if ( ( irqStatus[1] & IRQ_TX_DONE ) !=0 ) {
         irqFlags = (IrqFlags_t) (irqFlags | SENT_PACKET_IRQ_FLAG);
     }
-    
+
     if ( ( ( irqStatus[1] & IRQ_HEADER_ERROR ) != 0 ) ||
         ( ( irqStatus[1] & IRQ_CRC_ERROR ) != 0 ) ) {
         irqFlags = (IrqFlags_t) (irqFlags | BAD_PACKET_IRQ_FLAG);
     }
-    
+
     return irqFlags;
 }
 
@@ -159,7 +161,11 @@ void SX126x::SendLora(
     SetModulationParamsLora( SF, BW );
     SetPacketParamsLora( payloadSize, IQ_STANDARD );
     SetTxParams( power );
-    WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword, 2 );
+    if ( SF < 7 ) {
+        WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword_LowSF, 2 );
+    } else {
+        WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword, 2 );
+    }
     // Send the payload to the radio
     SetBufferBaseAddress( 0, 0 );
     WriteBuffer( 0, payload, payloadSize );
@@ -170,7 +176,7 @@ void SX126x::SendLora(
                         0xFFFF,
                         IRQ_RADIO_NONE,
                         IRQ_RADIO_NONE
-                   );
+                    );
     ClearIrqFlagsLora( );
     // Send ! No timeout here as it is already handled by the MAC
     SetTx( 0 );
@@ -207,7 +213,7 @@ void SX126x::SendFsk(
                         0xFFFF,
                         IRQ_RADIO_NONE,
                         IRQ_RADIO_NONE
-                   ); 
+                    );
     // Send ! No timeout here as it is already handled by the MAC
     SetTx( 0 );
 }
@@ -224,25 +230,33 @@ void SX126x::RxLora(
     SetRfFrequency( channel );
     SetModulationParamsLora( SF, BW );
     SetPacketParamsLora( 0, IQ_INVERTED );
-    //StopTimerOnPreamble( true );
     StopTimerOnPreamble( false );
-    //uint8_t tmp = 8;
-    //uint8_t PreambuleSymbNumL = 20;
-    //WriteRegister( 0x73B, PreambuleSymbNumL );
-    //WriteCommand( (OpCode_t)0xA0, &tmp, 1 );
 
-    WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword, 2 );
+    uint16_t symbTimeout = ( ( rxTimeoutMs & 0xFFFF ) * ( ( BW + 1 ) * 125 ) ) >> SF ;
+    if ( symbTimeout > 0x3FF ) {
+        symbTimeout = 0x3FF ;
+    }
+
+    uint8_t tmp = (uint8_t)symbTimeout; /* clip */
+    uint8_t PreambuleSymbNumL = 10;
+    WriteRegister( 0x73B, PreambuleSymbNumL );
+    WriteCommand( (OpCode_t)0xA0, &tmp, 1 );
+
+    if ( SF < 7 ) {
+        WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword_LowSF, 2 );
+    } else {
+        WriteRegisters( REG_LORA_SYNC_WORD_MSB, ( uint8_t * ) this->LoraSyncword, 2 );
+    }
     // Configure IRQ
     SetDioIrqParams(
                         IRQ_RX_DONE | IRQ_CRC_ERROR | IRQ_RX_TX_TIMEOUT,
                         IRQ_RX_DONE | IRQ_CRC_ERROR | IRQ_RX_TX_TIMEOUT,
                         IRQ_RADIO_NONE,
                         IRQ_RADIO_NONE
-                   );
+                    );
     ClearIrqFlagsLora( );
-    SetRx( rxTimeoutMs << 6 );
-    //rxTimeoutMs = 2000;
-    //SetRx( rxTimeoutMs << 6 );
+
+    SetRx( 0 );
 }
 
 void SX126x::RxFsk(
@@ -282,7 +296,7 @@ void SX126x::Sleep( bool coldStart ) {
 void SX126x::CalibrateImage( uint32_t freq )
 {
     uint8_t calFreq[2];
-    
+
     if( freq > 900000000 ) {
         calFreq[0] = 0xE1;
         calFreq[1] = 0xE9;
@@ -317,7 +331,7 @@ void SX126x::CheckDeviceReady( void ) {
 
 void SX126x::GetPacketStatusLora( int16_t *pktRssi, int16_t *snr, int16_t *signalRssi ) {
     uint8_t pktStatus[3];
-    
+
     // Read packet status
     ReadCommand( GET_PACKET_STATUS, pktStatus, 3 );
     *pktRssi = - (int)pktStatus[0] / 2;
@@ -327,7 +341,7 @@ void SX126x::GetPacketStatusLora( int16_t *pktRssi, int16_t *snr, int16_t *signa
 
 void SX126x::GetRxBufferStatus( uint8_t *payloadSize, uint8_t *rxStartBufferPointer ) {
     uint8_t status[2];
-    
+
     ReadCommand( GET_RX_BUFFER_STATUS, status, 2 );
     *payloadSize = status[0];
     *rxStartBufferPointer = status[1];
@@ -335,7 +349,7 @@ void SX126x::GetRxBufferStatus( uint8_t *payloadSize, uint8_t *rxStartBufferPoin
 
 void SX126x::ReadBuffer( uint8_t offset, uint8_t *payload, uint8_t payloadSize ) {
     waitOnBusy( );
-    
+
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     mcu.SpiWrite( READ_BUFFER );
     mcu.SpiWrite( offset );
@@ -357,18 +371,18 @@ uint8_t SX126x::ReadRegister( uint16_t address ) {
 void SX126x::ReadRegisters( uint16_t address, uint8_t *buffer, uint16_t size ) {
     // wait on low busy
     CheckDeviceReady( );
-    
+
     // Read registers
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     mcu.SpiWrite( READ_REGISTER );
     mcu.SpiWrite( ( address & 0xFF00 ) >> 8 );
     mcu.SpiWrite( address & 0x00FF );
     mcu.SpiWrite( 0 );
-    
+
     for( uint16_t i = 0; i < size; i++ ) {
         buffer[i] = mcu.SpiWrite( 0 );
     }
-    
+
     mcu.SetValueDigitalOutPin ( pinCS, 1 );
 }
 
@@ -404,7 +418,7 @@ void SX126x::ClearIrqStatus( uint16_t irq ) {
 uint8_t SX126x::ReadCommand( OpCode_t command, uint8_t *buffer, uint16_t size ) {
     uint8_t status;
     waitOnBusy( );
-    
+
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     // Send command
     mcu.SpiWrite( ( uint8_t ) command );
@@ -414,7 +428,7 @@ uint8_t SX126x::ReadCommand( OpCode_t command, uint8_t *buffer, uint16_t size ) 
          buffer[i] = mcu.SpiWrite( 0x00 );
     }
     mcu.SetValueDigitalOutPin ( pinCS, 1 );
-    
+
     return status;
 }
 
@@ -548,7 +562,7 @@ void SX126x::SetPaConfig(
 void SX126x::SetRfFrequency( uint32_t frequency ) {
     uint8_t buf[4];
     uint32_t freq = 0;
-    
+
     // Set frequency
     freq = ( uint32_t )( ( double )frequency / ( double )RADIO_FREQ_STEP );
     buf[0] = ( uint8_t )( ( freq >> 24 ) & 0xFF );
@@ -577,10 +591,10 @@ void SX126x::SetTxContinuousWave( void ) {
 void SX126x::SetTxInfinitePreamble( void ) {
     WriteCommand( SET_TXCONTINUOUSPREAMBLE, 0, 0 );
 }
-        
+
 void SX126x::SetRx( uint32_t timeout ) {
     uint8_t buf[3];
-    
+
     buf[0] = ( uint8_t )( ( timeout >> 16 ) & 0xFF );
     buf[1] = ( uint8_t )( ( timeout >> 8 ) & 0xFF );
     buf[2] = ( uint8_t )( timeout & 0xFF );
@@ -589,7 +603,7 @@ void SX126x::SetRx( uint32_t timeout ) {
 
 void SX126x::SetTx( uint32_t timeout ) {
     uint8_t buf[3];
-    
+
     buf[0] = ( uint8_t )( ( timeout >> 16 ) & 0xFF );
     buf[1] = ( uint8_t )( ( timeout >> 8 ) & 0xFF );
     buf[2] = ( uint8_t )( timeout & 0xFF );
@@ -599,7 +613,7 @@ void SX126x::SetTx( uint32_t timeout ) {
 
 void SX126x::SetTxParams( int8_t power ) {
     uint8_t buf[2];
-    
+
     // TODO - SX1262
     if( power == 15 ) {
         SX126x::SetPaConfig( 0x06, 0x00, 0x01, 0x01 );
@@ -613,7 +627,7 @@ void SX126x::SetTxParams( int8_t power ) {
     }
     buf[0] = 0x18;
     WriteRegisters( REG_OCP, buf, 1 ); // current max is 80 mA for the whole device
-   
+
     buf[0] = power;
     // TODO - Variable ?
     buf[1] = 0x04; // Ramp time : 200 �s
@@ -633,7 +647,7 @@ void SX126x::waitOnBusy( void ) {
 void SX126x::WriteBuffer( uint8_t offset, uint8_t *buffer, uint8_t size ) {
      // wait on low busy
     CheckDeviceReady( );
-    
+
     // Write buffers
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     mcu.SpiWrite( WRITE_BUFFER );
@@ -648,7 +662,7 @@ void SX126x::WriteBuffer( uint8_t offset, uint8_t *buffer, uint8_t size ) {
 void SX126x::WriteCommand( OpCode_t opCode, uint8_t *buffer, uint16_t size ) {
     // wait on low busy
     CheckDeviceReady( );
-    
+
     // Send command
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     mcu.SpiWrite( (uint8_t) opCode );
@@ -661,17 +675,17 @@ void SX126x::WriteCommand( OpCode_t opCode, uint8_t *buffer, uint16_t size ) {
 void SX126x::WriteRegisters( uint16_t address, uint8_t *buffer, uint16_t size ) {
     // wait on low busy
     CheckDeviceReady( );
-    
+
     // Write registers
     mcu.SetValueDigitalOutPin ( pinCS, 0 );
     mcu.SpiWrite( WRITE_REGISTER );
     mcu.SpiWrite( ( address & 0xFF00 ) >> 8 );
     mcu.SpiWrite( address & 0x00FF );
-    
+
     for( uint16_t i = 0; i < size; i++ ) {
        mcu.SpiWrite( buffer[i] );
     }
-    
+
     mcu.SetValueDigitalOutPin ( pinCS, 1 );
 }
 

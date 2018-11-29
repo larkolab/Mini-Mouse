@@ -1,14 +1,14 @@
 /*
 
-  __  __ _       _                                 
- |  \/  ( _)     ( _)                                
- | \  / |_ _ __  _ _ __ ___   ___  _   _ ___  ___  
+  __  __ _       _
+ |  \/  ( _)     ( _)
+ | \  / |_ _ __  _ _ __ ___   ___  _   _ ___  ___
  | |\/| | | '_ \| | '_ ` _ \ / _ \| | | / __|/ _ \
- | |  | | | | | | | | | | | | ( _) | |_| \__ \  __/ 
- |_|  |_|_|_| |_|_|_| |_| |_|\___/ \__,_|___/\___| 
-                                                   
-                                                   
-Description       : LoraWan Regions Specific objets.  
+ | |  | | | | | | | | | | | | ( _) | |_| \__ \  __/
+ |_|  |_|_|_| |_|_|_| |_| |_|\___/ \__,_|___/\___|
+
+
+Description       : LoraWan Regions Specific objets.
 License           : Revised BSD License, see LICENSE.TXT file include in the project
 Maintainer        : Fabien Holin ( SEMTECH)
 
@@ -25,7 +25,7 @@ template class LoraRegionsEU<SX1276>;
 template class LoraRegionsEU<SX1272>;
 template class LoraRegionsEU<SX126x>;
 template < class R > LoraRegionsEU<R>::LoraRegionsEU ( sLoRaWanKeys LoRaWanKeys, R * RadioUser, uint32_t FlashAdress) : LoraWanContainer<16,R>  ( LoRaWanKeys, RadioUser, FlashAdress ){
-    
+
     memset( this->MacChannelIndexEnabled, CHANNEL_DISABLED, this->NUMBER_OF_CHANNEL );
     memset( this->MacMinDataRateChannel, 0, this->NUMBER_OF_CHANNEL );
     for (int i = 0 ; i < this->NUMBER_OF_CHANNEL ; i ++ ) {
@@ -35,19 +35,44 @@ template < class R > LoraRegionsEU<R>::LoraRegionsEU ( sLoRaWanKeys LoRaWanKeys,
     this->MacChannelIndexEnabled [0] = CHANNEL_ENABLED;
     this->MacChannelIndexEnabled [1] = CHANNEL_ENABLED;
     this->MacChannelIndexEnabled [2] = CHANNEL_ENABLED;
+    this->MacChannelIndexEnabled [3] = CHANNEL_ENABLED;
+    this->MacChannelIndexEnabled [4] = CHANNEL_ENABLED;
+    this->MacChannelIndexEnabled [5] = CHANNEL_ENABLED;
+    this->MacChannelIndexEnabled [6] = CHANNEL_ENABLED;
+    this->MacChannelIndexEnabled [7] = CHANNEL_ENABLED;
     this->MacMinDataRateChannel [0] = 0;
     this->MacMinDataRateChannel [1] = 0;
     this->MacMinDataRateChannel [2] = 0;
+    this->MacMinDataRateChannel [3] = 0;
+    this->MacMinDataRateChannel [4] = 0;
+    this->MacMinDataRateChannel [5] = 0;
+    this->MacMinDataRateChannel [6] = 0;
+    this->MacMinDataRateChannel [7] = 0;
     this->MacMaxDataRateChannel [0] = 5;
     this->MacMaxDataRateChannel [1] = 5;
     this->MacMaxDataRateChannel [2] = 5;
-    this->MacTxFrequency[0]    = 868100000;
-    this->MacTxFrequency[1]    = 868300000;
-    this->MacTxFrequency[2]    = 868500000;
-    this->MacRx1Frequency[0]   = 868100000;
-    this->MacRx1Frequency[1]   = 868300000;
-    this->MacRx1Frequency[2]   = 868500000;
-    this->MacRx2Frequency      = 869525000; 
+    this->MacMinDataRateChannel [3] = 5;
+    this->MacMinDataRateChannel [4] = 5;
+    this->MacMinDataRateChannel [5] = 5;
+    this->MacMinDataRateChannel [6] = 5;
+    this->MacMinDataRateChannel [7] = 5;
+    this->MacTxFrequency[0]    = 866100000;
+    this->MacTxFrequency[1]    = 866300000;
+    this->MacTxFrequency[2]    = 866500000;
+    this->MacTxFrequency[3]    = 865100000;
+    this->MacTxFrequency[4]    = 865300000;
+    this->MacTxFrequency[5]    = 865500000;
+    this->MacTxFrequency[6]    = 865700000;
+    this->MacTxFrequency[7]    = 865900000;
+    this->MacRx1Frequency[0]   = this->MacTxFrequency[0];
+    this->MacRx1Frequency[1]   = this->MacTxFrequency[1];
+    this->MacRx1Frequency[2]   = this->MacTxFrequency[2];
+    this->MacRx1Frequency[3]   = this->MacTxFrequency[3];
+    this->MacRx1Frequency[4]   = this->MacTxFrequency[4];
+    this->MacRx1Frequency[5]   = this->MacTxFrequency[5];
+    this->MacRx1Frequency[6]   = this->MacTxFrequency[6];
+    this->MacRx1Frequency[7]   = this->MacTxFrequency[7];
+    this->MacRx2Frequency      = 869525000;
     this->MacTxPower           = TX_POWER;
     this->MacRx1DataRateOffset = 0;
     this->MacRx2DataRate       = RX2DR_INIT;
@@ -115,10 +140,10 @@ template < class R >eStatusChannel LoraRegionsEU<R>::RegionBuildChannelMask ( ui
     eStatusChannel status = OKCHANNEL;
     switch ( ChMaskCntl ) {
         case 0 :
-            UnwrappedChannelMask = UnwrappedChannelMask & ChMask; 
+            UnwrappedChannelMask = UnwrappedChannelMask & ChMask;
             DEBUG_PRINTF("UnwrappedChannelMask = 0x%x, ChMask = 0x%x\n",UnwrappedChannelMask,ChMask);
             for ( int i = 0 ; i < this->NUMBER_OF_CHANNEL ; i++) {
-                if ( ( ( ( UnwrappedChannelMask >> i) & 0x1 ) == 1 ) && ( this->MacTxFrequency[i] == 0) ) {  
+                if ( ( ( ( UnwrappedChannelMask >> i) & 0x1 ) == 1 ) && ( this->MacTxFrequency[i] == 0) ) {
                     status = ERROR_CHANNEL_MASK ;   // this status is used only for the last multiple link adr req
                 }
             }
@@ -131,12 +156,12 @@ template < class R >eStatusChannel LoraRegionsEU<R>::RegionBuildChannelMask ( ui
                 }
             }
             break;
-        default : 
+        default :
             status = ERROR_CHANNEL_CNTL;
     }
     if ( UnwrappedChannelMask == 0 ) {
-        status = ERROR_CHANNEL_MASK ; 
-    }        
+        status = ERROR_CHANNEL_MASK ;
+    }
     return ( status );
 };
 
@@ -198,7 +223,7 @@ template < class R >eStatusLoRaWan LoraRegionsEU<R>:: RegionIsValidDataRate ( ui
     status = ( temp > 7) ? ERRORLORAWAN : OKLORAWAN;
     return ( status );
 }
-    
+
 template < class R >eStatusLoRaWan LoraRegionsEU<R>::RegionIsAcceptableDataRate ( uint8_t DataRate ) {
     InsertTrace ( __COUNTER__, FileId );
     eStatusLoRaWan status = ERRORLORAWAN;
@@ -259,59 +284,59 @@ template < class R >void LoraRegionsEU<R>::RegionSetDataRateDistribution( uint8_
     memset(DistriDataRateInit,0 , 8);
     switch ( adrMode ) {
         case MOBILE_LONGRANGE_DR_DISTRIBUTION:  // in this example 4/7 dr0 2/7 dr1 and 1/7 dr2
-            DistriDataRateInit[7]    = 0; 
-            DistriDataRateInit[6]    = 0; 
-            DistriDataRateInit[5]    = 0; 
+            DistriDataRateInit[7]    = 0;
+            DistriDataRateInit[6]    = 0;
+            DistriDataRateInit[5]    = 0;
             DistriDataRateInit[4]    = 0;
             DistriDataRateInit[3]    = 0;
-            DistriDataRateInit[2]    = 1; 
-            DistriDataRateInit[1]    = 2; 
-            DistriDataRateInit[0]    = 4; 
-            this->MacNbTrans         = 1;   
+            DistriDataRateInit[2]    = 1;
+            DistriDataRateInit[1]    = 2;
+            DistriDataRateInit[0]    = 4;
+            this->MacNbTrans         = 1;
             break;
         case MOBILE_LOWPER_DR_DISTRIBUTION://in this example 5/10 dr5 4/10 dr4 and 1/10 dr0
-            DistriDataRateInit[7]    = 0; 
-            DistriDataRateInit[6]    = 0; 
-            DistriDataRateInit[5]    = 5; 
+            DistriDataRateInit[7]    = 0;
+            DistriDataRateInit[6]    = 0;
+            DistriDataRateInit[5]    = 5;
             DistriDataRateInit[4]    = 4;
             DistriDataRateInit[3]    = 0;
-            DistriDataRateInit[2]    = 0; 
-            DistriDataRateInit[1]    = 0;         
-            DistriDataRateInit[0]    = 1; 
+            DistriDataRateInit[2]    = 0;
+            DistriDataRateInit[1]    = 0;
+            DistriDataRateInit[0]    = 1;
             this->MacNbTrans         = 1;
             break;
         case JOIN_DR_DISTRIBUTION: //in this example 1/3 dr5 1/3 dr4 and 1/3 dr0
-            DistriDataRateInit[7]    = 0; 
+            DistriDataRateInit[7]    = 0;
             DistriDataRateInit[6]    = 0;
-            DistriDataRateInit[5]    = 1; 
-            DistriDataRateInit[4]    = 0; 
+            DistriDataRateInit[5]    = 1;
+            DistriDataRateInit[4]    = 0;
             DistriDataRateInit[3]    = 0;
-            DistriDataRateInit[2]    = 0; 
-            DistriDataRateInit[1]    = 0; 
-            DistriDataRateInit[0]    = 1; 
+            DistriDataRateInit[2]    = 0;
+            DistriDataRateInit[1]    = 0;
+            DistriDataRateInit[0]    = 1;
             this->MacNbTrans         = 1;
             break;
         case USER_DR_DISTRIBUTION: //in this example 1/3 dr5 1/3 dr4 and 1/3 dr0
             DistriDataRateInit[7]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x0000000F ) );
-            DistriDataRateInit[6]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x000000F0 ) ) >> 4; //fsk 
-            DistriDataRateInit[5]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x00000F00 ) ) >> 8; 
-            DistriDataRateInit[4]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x0000F000 ) ) >> 12; 
-            DistriDataRateInit[3]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x000F0000 ) ) >> 16; 
-            DistriDataRateInit[2]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x00F00000 ) ) >> 20; 
-            DistriDataRateInit[1]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x0F000000 ) ) >> 24; 
-            DistriDataRateInit[0]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0xF0000000 ) ) >> 28; 
+            DistriDataRateInit[6]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x000000F0 ) ) >> 4;
+            DistriDataRateInit[5]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x00000F00 ) ) >> 8;
+            DistriDataRateInit[4]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x0000F000 ) ) >> 12;
+            DistriDataRateInit[3]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x000F0000 ) ) >> 16;
+            DistriDataRateInit[2]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x00F00000 ) ) >> 20;
+            DistriDataRateInit[1]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0x0F000000 ) ) >> 24;
+            DistriDataRateInit[0]    = ( ( USER_DR_DISTRIBUTION_PARAMETERS )& ( 0xF0000000 ) ) >> 28;
             this->MacNbTrans         = USER_NUMBER_OF_RETRANSMISSION;
-        
+
             break;
-        default: 
-            DistriDataRateInit[0]    = 1; 
-            DistriDataRateInit[1]    = 0; 
-            DistriDataRateInit[2]    = 0; 
-            DistriDataRateInit[3]    = 0; 
-            DistriDataRateInit[4]    = 0; 
-            DistriDataRateInit[5]    = 0; 
-            DistriDataRateInit[6]    = 0; 
-            DistriDataRateInit[7]    = 0; 
+        default:
+            DistriDataRateInit[0]    = 1;
+            DistriDataRateInit[1]    = 0;
+            DistriDataRateInit[2]    = 0;
+            DistriDataRateInit[3]    = 0;
+            DistriDataRateInit[4]    = 0;
+            DistriDataRateInit[5]    = 0;
+            DistriDataRateInit[6]    = 0;
+            DistriDataRateInit[7]    = 0;
             this->MacNbTrans         = 1;
     }
     this->MacTxPower                 = 14;
@@ -370,7 +395,7 @@ template < class R >void LoraRegionsEU<R>::RegionDecreaseDataRate ( void ) {
         this->MacChannelIndexEnabled [1] = CHANNEL_ENABLED ;
         this->MacChannelIndexEnabled [2] = CHANNEL_ENABLED ;;
     }
-//@notereview    join continuer flag 
+//@notereview    join continuer flag
 }
 
 
@@ -382,7 +407,7 @@ template < class R >void  LoraRegionsEU<R>::RegionGiveNextChannel( void ) {
     InsertTrace ( __COUNTER__, FileId );
     uint8_t NbOfActiveChannel = 0 ;
     for (int i = 0 ; i < this->NUMBER_OF_CHANNEL ; i ++ ) {
-        if ( this->MacChannelIndexEnabled [i] == CHANNEL_ENABLED ) { 
+        if ( this->MacChannelIndexEnabled [i] == CHANNEL_ENABLED ) {
             NbOfActiveChannel++;
         }
     }
@@ -410,7 +435,7 @@ template < class R >void LoraRegionsEU<R>::RegionLoadFromFlash ( void ){
     uint32_t crcLow;
     uint32_t crcHigh;
     mcu.RestoreContext((uint8_t *)(&BackUpFlash), this->UserFlashAdress, sizeof(sBackUpFlash));
-    Crc64((uint8_t * )(&BackUpFlash), sizeof(sBackUpFlash)-8 , &crcLow, &crcHigh );    
+    Crc64((uint8_t * )(&BackUpFlash), sizeof(sBackUpFlash)-8 , &crcLow, &crcHigh );
     if (( crcLow == BackUpFlash.CrcLow ) &&  ( crcHigh == BackUpFlash.CrcHigh ) ) { // explicit else = factory reset => the default value inside the constructor
         BackUpFlash.FcntUp                 +=  FLASH_UPDATE_PERIOD; //@note automatic increment
         BackUpFlash.NbOfReset ++;
@@ -418,8 +443,8 @@ template < class R >void LoraRegionsEU<R>::RegionLoadFromFlash ( void ){
         this->MacTxDataRate                 = BackUpFlash.MacTxDataRate;
         this->MacTxPower                    = BackUpFlash.MacTxPower;
         this->MacChMask                     = BackUpFlash.MacChMask;
-        this->MacNbTrans                    = BackUpFlash.MacNbTrans; 
-        this->MacRx2Frequency               = BackUpFlash.MacRx2Frequency; 
+        this->MacNbTrans                    = BackUpFlash.MacNbTrans;
+        this->MacRx2Frequency               = BackUpFlash.MacRx2Frequency;
         this->MacRx2DataRate                = BackUpFlash.MacRx2DataRate;
         this->MacRx1DataRateOffset          = BackUpFlash.MacRx1DataRateOffset;
         this->MacRx1Delay                   = BackUpFlash.MacRx1Delay ;
@@ -441,7 +466,7 @@ template < class R >void LoraRegionsEU<R>::RegionLoadFromFlash ( void ){
         Crc64((uint8_t * )(&BackUpFlash), sizeof(sBackUpFlash) - 8, &crcLow, &crcHigh );
         BackUpFlash.CrcLow  = crcLow;
         BackUpFlash.CrcHigh = crcHigh;
-        mcu.StoreContext( &BackUpFlash, this->UserFlashAdress, ( sizeof(sBackUpFlash) >> 3 ) );    
+        mcu.StoreContext( &BackUpFlash, this->UserFlashAdress, ( sizeof(sBackUpFlash) >> 3 ) );
         DEBUG_PRINTF ("\n MacTxDataRate = %d ", this->MacTxDataRate ) ;
         DEBUG_PRINTF ("\n MacTxPower = %d ", this->MacTxPower ) ;
         DEBUG_PRINTF ("\n MacChMask = 0x%x ", this->MacChMask ) ;
@@ -478,8 +503,8 @@ template < class R >void LoraRegionsEU<R>::RegionSaveInFlash ( void ){
     BackUpFlash.MacTxDataRate           = this->MacTxDataRate;
     BackUpFlash.MacTxPower              = this->MacTxPower;
     BackUpFlash.MacChMask               = this->MacChMask;
-    BackUpFlash.MacNbTrans              = this->MacNbTrans; 
-    BackUpFlash.MacRx2Frequency         = this->MacRx2Frequency; 
+    BackUpFlash.MacNbTrans              = this->MacNbTrans;
+    BackUpFlash.MacRx2Frequency         = this->MacRx2Frequency;
     BackUpFlash.MacRx2DataRate          = this->MacRx2DataRate;
     BackUpFlash.MacRx1DataRateOffset    = this->MacRx1DataRateOffset;
     BackUpFlash.MacRx1Delay             = this->MacRx1Delay;
@@ -498,9 +523,9 @@ template < class R >void LoraRegionsEU<R>::RegionSaveInFlash ( void ){
     memcpy( &BackUpFlash.nwkSKey[0], &this->nwkSKey[0], 16);
     memcpy( &BackUpFlash.appSKey[0], &this->appSKey[0], 16);
     Crc64((uint8_t * )(&BackUpFlash), sizeof(sBackUpFlash) - 8, &crcLow, &crcHigh );
-    BackUpFlash.CrcLow  = crcLow ; 
+    BackUpFlash.CrcLow  = crcLow ;
     BackUpFlash.CrcHigh = crcHigh ;
-    mcu.StoreContext( &BackUpFlash, this->UserFlashAdress, ( sizeof(sBackUpFlash) >> 3 ) );  
+    mcu.StoreContext( &BackUpFlash, this->UserFlashAdress, ( sizeof(sBackUpFlash) >> 3 ) );
 }
 
 template < class R >void LoraRegionsEU<R>::RegionSetBadCrcInFlash ( void ){
@@ -509,8 +534,8 @@ template < class R >void LoraRegionsEU<R>::RegionSetBadCrcInFlash ( void ){
     BackUpFlash.MacTxDataRate           = this->MacTxDataRate;
     BackUpFlash.MacTxPower              = this->MacTxPower;
     BackUpFlash.MacChMask               = this->MacChMask;
-    BackUpFlash.MacNbTrans              = this->MacNbTrans; 
-    BackUpFlash.MacRx2Frequency         = this->MacRx2Frequency; 
+    BackUpFlash.MacNbTrans              = this->MacNbTrans;
+    BackUpFlash.MacRx2Frequency         = this->MacRx2Frequency;
     BackUpFlash.MacRx2DataRate          = this->MacRx2DataRate;
     BackUpFlash.MacRx1DataRateOffset    = this->MacRx1DataRateOffset;
     BackUpFlash.MacRx1Delay             = this->MacRx1Delay;
@@ -532,7 +557,7 @@ template < class R >void LoraRegionsEU<R>::RegionSetBadCrcInFlash ( void ){
     BackUpFlash.CrcLow  = crcLow +1 ; // bad crc
     BackUpFlash.CrcHigh = crcHigh + 1;
     mcu.StoreContext( &BackUpFlash, this->UserFlashAdress, ( sizeof(sBackUpFlash) >> 3 ) );
-    mcu.mwait_ms( 100 );    
+    mcu.mwait_ms( 100 );
 }
 /***********************************************************************************************/
 /*                      Private  Methods                                                        */
@@ -541,35 +566,35 @@ template < class R >void LoraRegionsEU<R>::RegionSetBadCrcInFlash ( void ){
 template < class R >void LoraRegionsEU<R>:: TxDataRateToSfBw ( uint8_t dataRate ) {
     InsertTrace ( __COUNTER__, FileId );
     this->MacTxModulationCurrent = LORA ;
-    if ( dataRate < 6 ){ 
+    if ( dataRate < 8 ){
         this->MacTxSfCurrent = 12 - dataRate ;
         this->MacTxBwCurrent = BW125 ;
-    } else if ( dataRate == 6 ){ 
+    } else if ( dataRate == 8 ){
         this->MacTxSfCurrent = 7;
         this->MacTxBwCurrent = BW250 ;}
-    else if ( dataRate == 7 ) {
+    else if ( dataRate == 9 ) {
         this->MacTxModulationCurrent = FSK ;
     } else {
         this->MacTxSfCurrent = 12 ;
         this->MacTxBwCurrent = BW125 ;
-        DEBUG_MSG( " Invalid Datarate \n" ) ; 
+        DEBUG_MSG( " Invalid Datarate \n" ) ;
     }
 }
 template < class R >void LoraRegionsEU<R>:: Rx2DataRateToSfBw ( uint8_t dataRate ) {
     InsertTrace ( __COUNTER__, FileId );
-    if ( dataRate < 6 ){ 
+    if ( dataRate < 8 ){
         this->MacRx2SfCurrent = 12 - dataRate ;
         this->MacRx2BwCurrent = BW125 ;
-    } else if ( dataRate== 6 ){ 
+    } else if ( dataRate == 8 ){
         this->MacRx2SfCurrent = 7;
         this->MacRx2BwCurrent = BW250 ;}
-    else if ( dataRate == 7 ) {
-         this->MacRx2ModulationTypeCurrent = FSK;
+    else if ( dataRate == 9 ) {
+        this->MacRx2ModulationTypeCurrent = FSK;
         //@note tbd manage fsk case }
     }
     else {
         this->MacRx2SfCurrent = 12 ;
         this->MacRx2BwCurrent = BW125 ;
-        DEBUG_MSG( " Invalid Datarate \n" ) ; 
+        DEBUG_MSG( " Invalid Datarate \n" ) ;
     }
 }

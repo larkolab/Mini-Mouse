@@ -161,7 +161,7 @@ void SX1276::SendLora( uint8_t *payload, uint8_t payloadSize,
     Write ( REG_DIOMAPPING2, 0x00 );
     /* Send */
     SetOpMode( RF_OPMODE_TRANSMITTER );
-         mcu.SetValueDigitalOutPin ( DEBUG , 1 ); 
+    mcu.SetValueDigitalOutPin ( DEBUG , 1 );
 }
 
 void SX1276::SendFsk( uint8_t *payload, uint8_t payloadSize,
@@ -180,7 +180,7 @@ void SX1276::SendFsk( uint8_t *payload, uint8_t payloadSize,
         mcu.SetValueDigitalOutPin(RADIO_ANT_SWITCH_RX,0);
     #endif
     CalibrateImage( );
-    
+
     /* Configure FSK Tx */
     this->Sleep( false );
     SetOpModeFsk( RF_OPMODE_MODULATIONTYPE_FSK, RFLR_OPMODE_FREQMODE_ACCESS_LF, RF_OPMODE_SLEEP );
@@ -192,7 +192,7 @@ void SX1276::SendFsk( uint8_t *payload, uint8_t payloadSize,
         WriteFifo( &payloadSize, 1);
         WriteFifo( payload, payloadSize);
         SetOpMode( RF_OPMODE_TRANSMITTER );
-             mcu.SetValueDigitalOutPin ( DEBUG , 1 ); 
+        mcu.SetValueDigitalOutPin ( DEBUG , 1 );
         return;
     }
     else {
@@ -219,13 +219,13 @@ void SX1276::SendFsk( uint8_t *payload, uint8_t payloadSize,
 void SX1276::RxLora(eBandWidth BW, uint8_t SF, uint32_t channel, uint16_t TimeOutMs ) {
     Channel = channel;
     /* Configure Lora Rx */
-    //Reset( ); 
+    //Reset( );
     #ifdef RADIO_ANT_SWITCH_TX_RF0
         mcu.SetValueDigitalOutPin(RADIO_ANT_SWITCH_TX_RF0,0);
     #endif
     #ifdef RADIO_ANT_SWITCH_RX
         mcu.SetValueDigitalOutPin(RADIO_ANT_SWITCH_RX,1);
-    #endif 
+    #endif
     CalibrateImage( );
     SetOpMode( RF_OPMODE_SLEEP );
     /* Set Lora Mode and max payload to 0x40 */
@@ -238,7 +238,7 @@ void SX1276::RxLora(eBandWidth BW, uint8_t SF, uint32_t channel, uint16_t TimeOu
     }
     SetModulationParamsRxLora( SF, BW, symbTimeout);
     /* Configure IRQ Rx Done or Rx timeout */
-    Write ( REG_LR_IRQFLAGSMASK, 0x3F ); 
+    Write ( REG_LR_IRQFLAGSMASK, 0x3F );
     Write ( REG_DIOMAPPING1,0);
     Write ( REG_DIOMAPPING2, 0x00 );
     /* Configure Fifo*/
@@ -246,11 +246,11 @@ void SX1276::RxLora(eBandWidth BW, uint8_t SF, uint32_t channel, uint16_t TimeOu
     Write( REG_LR_FIFOADDRPTR, 0 );
     /* Receive */
     SetOpMode( RFLR_OPMODE_RECEIVER_SINGLE );
-      mcu.SetValueDigitalOutPin ( DEBUG , 1 ); 
+    mcu.SetValueDigitalOutPin ( DEBUG , 1 );
 }
 
 void SX1276::RxFsk(uint32_t channel, uint16_t timeOutMs) {
-   
+
     #ifdef RADIO_ANT_SWITCH_TX_RF0
         mcu.SetValueDigitalOutPin(RADIO_ANT_SWITCH_TX_RF0,0);
     #endif
@@ -258,7 +258,7 @@ void SX1276::RxFsk(uint32_t channel, uint16_t timeOutMs) {
         mcu.SetValueDigitalOutPin(RADIO_ANT_SWITCH_RX,1);
     #endif
     volatile int CptTimeOut = 0;
-     mcu.SetValueDigitalOutPin ( pinReset, 0);
+    mcu.SetValueDigitalOutPin ( pinReset, 0);
     for (int i = 0 ; i <10000; i++){
         CptTimeOut++;
     }
@@ -274,7 +274,7 @@ void SX1276::RxFsk(uint32_t channel, uint16_t timeOutMs) {
     rxPayloadSize = 0;
     uint8_t bytesReceived = 0;
     uint8_t remainingBytes = 0;
-    uint8_t LORAWAN_MIN_PACKET_SIZEt = 2; 
+    uint8_t LORAWAN_MIN_PACKET_SIZEt = 2;
     uint8_t firstBytesRx[LORAWAN_MIN_PACKET_SIZE] = {0x00};
     uint8_t payloadChunkSize = FSK_THRESHOLD_REFILL_LIMIT;
     SetOpModeFsk( RF_OPMODE_MODULATIONTYPE_FSK, RFLR_OPMODE_FREQMODE_ACCESS_LF, RF_OPMODE_SLEEP );
@@ -283,15 +283,15 @@ void SX1276::RxFsk(uint32_t channel, uint16_t timeOutMs) {
     SetModulationParamsRxFsk( symbTimeout );
     SetFifoThreshold(LORAWAN_MIN_PACKET_SIZEt - 1);
     SetOpMode( RF_OPMODE_RECEIVER );
-  mcu.SetValueDigitalOutPin ( DEBUG , 1 ); 
-    while(!IsFskFifoLevelReached()) {
-           mcu.waitUnderIt(32000);
-           CptTimeOut++;
+    mcu.SetValueDigitalOutPin ( DEBUG , 1 );
+    while (!IsFskFifoLevelReached()) {
+        mcu.waitUnderIt(32000);
+        CptTimeOut++;
         //if(this->HasTimeouted()) {
-            if ( CptTimeOut > 5000) {
+        if ( CptTimeOut > 5000) {
             DEBUG_MSG ("rx timeou \n");
             this->Sleep(false);
-            this->SetAndGenerateFakeIRQ(RXTIMEOUT_IRQ_FLAG); 
+            this->SetAndGenerateFakeIRQ(RXTIMEOUT_IRQ_FLAG);
             return;
         }
     }
@@ -304,21 +304,21 @@ void SX1276::RxFsk(uint32_t channel, uint16_t timeOutMs) {
     SetFifoThreshold(payloadChunkSize - 1);
     while(remainingBytes > payloadChunkSize) {
         while(!IsFskFifoLevelReached()) {
-             
+
         }
         ReadFifo( rxBuffer + bytesReceived, payloadChunkSize );
         bytesReceived += payloadChunkSize;
         remainingBytes = rxPayloadSize - bytesReceived;
     }
     SetFifoThreshold(remainingBytes - 1);
-   
+
     while(!IsPayloadReady()) {
-      
+
     }
     ReadFifo( rxBuffer + bytesReceived, remainingBytes );
     lastPacketRssi = this->GetCurrentRssi();
     DEBUG_PRINTF("rssi = %d \n",lastPacketRssi);
-     
+
     this->Sleep(false);
     this->SetAndGenerateFakeIRQ(RECEIVE_PACKET_IRQ_FLAG);
 }
