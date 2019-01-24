@@ -72,7 +72,7 @@ template < class R > LoraRegionsEU<R>::LoraRegionsEU ( sLoRaWanKeys LoRaWanKeys,
     this->MacRx1Frequency[5]   = this->MacTxFrequency[5];
     this->MacRx1Frequency[6]   = this->MacTxFrequency[6];
     this->MacRx1Frequency[7]   = this->MacTxFrequency[7];
-    this->MacRx2Frequency      = 869525000;
+    this->MacRx2Frequency      = 863525000;
     this->MacTxPower           = TX_POWER;
     this->MacRx1DataRateOffset = 0;
     this->MacRx2DataRate       = RX2DR_INIT;
