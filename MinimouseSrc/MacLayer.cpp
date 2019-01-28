@@ -434,7 +434,7 @@ template <int NBCHANNEL, class R> eStatusLoRaWan LoraWanContainer<NBCHANNEL, R>:
             case LINK_ADR_REQ :
                 InsertTrace ( __COUNTER__, FileId );
                 NbMultiLinkAdrReq = 0;
-            /* extract the number of multiple link adr req specification in LoRAWan1.0.2 */
+                /* extract the number of multiple link adr req specification in LoRAWan1.0.2 */
                 while (( MacNwkPayload[NwkPayloadIndex + ( NbMultiLinkAdrReq + 1 ) * LINK_ADR_REQ_SIZE ] == LINK_ADR_REQ ) && ( NwkPayloadIndex + LINK_ADR_REQ_SIZE < MacNwkPayloadSize ) ){
                     NbMultiLinkAdrReq ++;
                     InsertTrace ( __COUNTER__, FileId );
@@ -471,7 +471,7 @@ template <int NBCHANNEL, class R> eStatusLoRaWan LoraWanContainer<NBCHANNEL, R>:
                 break;
             default:
                 InsertTrace ( __COUNTER__, FileId );
-                DEBUG_MSG( " Illegal state in mac layer\n " );
+                DEBUG_PRINTF( " Illegal state in mac layer: %d\n ", CmdIdentifier );
                 break;
         }
     }
