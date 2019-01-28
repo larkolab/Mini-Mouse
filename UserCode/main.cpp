@@ -100,12 +100,19 @@ uint32_t TimeOnAir( uint8_t pktLen, eBandWidth bandwidth, uint8_t Datarate, uint
 void UserIsr( void );
 
 /*!
+ * \brief   Global variables
+ */
+
+static bool PacketReceived = false;
+static bool RxTimeout = false;
+
+/*!
  * \brief   Main function
  */
 
 int main( void ) {
     uint8_t uid[8];
-    eTestApp TestApp = TEST_APP_LORAWAN;
+    eTestApp TestApp = TEST_APP_RX;
 
     /* RtcInit , WakeUpInit, LowPowerTimerLoRaInit() are Mcu dependant. */
     mcu.InitMcu( );
@@ -254,6 +261,12 @@ void TxShotgun_app( void ) {
     uint32_t ToA;
     uint8_t CurrentSF;
 
+    DEBUG_MSG("\n---------------------> Starting TxShotgun application <-------------------------------\n");
+
+    /* Prepare hardware */
+    mcu.AttachInterruptIn( &UserIsr );
+    RadioUser->Reset();
+
     /* Prepare UserPayload and User parameters */
     UserPayloadSize = 14;
     for ( int i = 0; i < UserPayloadSize; i++ ) {
@@ -261,14 +274,8 @@ void TxShotgun_app( void ) {
     }
     UserPayload[0] = FW_VERSION;
 
-    DEBUG_MSG("\n---------------------> Starting TxShotgun application <-------------------------------\n");
-
-    mcu.AttachInterruptIn( &UserIsr );
-
-    RadioUser->Reset();
-
+    /* Send packets */
     while ( 1 ) {
-        /* Send packet */
         DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
 
         CurrentSF = 7;
@@ -292,6 +299,48 @@ void TxShotgun_app( void ) {
  */
 
 void Rx_app( void ) {
+    uint8_t UserPayloadSize;
+    uint8_t UserPayload[255];
+    int16_t rssi, snr;
+    uint32_t NumberOfPacketReceived = 0;
+
+    DEBUG_MSG("\n---------------------> Starting Rx application <-------------------------------\n");
+
+    /* Prepare hardware */
+    mcu.AttachInterruptIn( &UserIsr );
+    RadioUser->Reset();
+
+    /* Receive packets */
+    while ( 1 ) {
+        DEBUG_MSG("\n---------------------> Waiting for a NEW PACKET <-------------------------------\n");
+
+        /* Set Rx config */
+        RadioUser->RxLora( BW125, 7, 866100000, 0 ); /* infinite timeout */
+        while ( PacketReceived != true ) {
+            mcu.mwait_ms( 1 );
+            if ( RxTimeout == true ) {
+                RxTimeout = false; /* reset value */
+                break;
+            }
+            /* Everything is OK so far... */
+            mcu.WatchDogRelease( );
+        }
+
+        if ( PacketReceived == true ) {
+            PacketReceived = false; /* reset value */
+
+            /* Get packet data */
+            RadioUser->FetchPayloadLora( &UserPayloadSize, &UserPayload[0], &snr, &rssi );
+            DEBUG_PRINTF( "--> Received packet with RSSI %d dBm, SNR %d dB\n", rssi, snr );
+            for ( int i = 0; i < UserPayloadSize; i++ ) {
+                DEBUG_PRINTF( "%02X ", UserPayload[i] );
+            }
+            DEBUG_MSG( "\n" );
+
+            NumberOfPacketReceived += 1;
+            DEBUG_PRINTF( "--> Total number of packet received: %u\n", NumberOfPacketReceived );
+        }
+    }
 }
 
 /*!
@@ -350,19 +399,21 @@ void UserIsr( void ) {
 
     switch ( RegIrqFlag ) {
         case SENT_PACKET_IRQ_FLAG:
-            DEBUG_MSG("packet sent\n");
+            DEBUG_MSG( "[ISR] packet sent\n" );
             break;
 
         case RECEIVE_PACKET_IRQ_FLAG:
-            DEBUG_MSG("packet received\n");
+            PacketReceived = true;
+            DEBUG_MSG( "[ISR] packet received\n" );
             break;
 
         case RXTIMEOUT_IRQ_FLAG:
-            DEBUG_MSG("RX timeout\n");
+            RxTimeout = true;
+            DEBUG_MSG( "[ISR] RX timeout\n" );
             break;
 
         case BAD_PACKET_IRQ_FLAG:
-            DEBUG_MSG("Bad packet\n");
+            DEBUG_MSG( "[ISR] Bad packet\n" );
             break;
 
         default :
