@@ -138,7 +138,7 @@ int main( void ) {
     /* Launch main application */
     switch( TestApp ) {
         case TEST_APP_TX:
-            TxShotgun_app( 10 );
+            TxShotgun_app( 100 );
             break;
         case TEST_APP_RX:
             Rx_app( );
@@ -164,7 +164,7 @@ void LoRaWAN_app( uint32_t NbLoop ) {
     uint8_t UserFport;
     uint8_t UserRxFport;
     uint8_t MsgType;
-    uint8_t AppTimeSleeping = 5;
+    uint8_t AppTimeSleeping = 2;
     uint8_t AvailableRxPacket = NO_LORA_RXPACKET_AVAILABLE;
     eLoraWan_Process_States LpState = LWPSTATE_IDLE;
 
