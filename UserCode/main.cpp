@@ -85,7 +85,7 @@ sLoRaWanKeys LoraWanKeys = { LoRaMacNwkSKeyInit, LoRaMacAppSKeyInit, LoRaMacAppK
  */
 typedef enum {
     TEST_APP_LORAWAN,
-    TEST_APP_TX_SHOTGUN,
+    TEST_APP_TX,
     TEST_APP_RX
 } eTestApp;
 
@@ -93,8 +93,8 @@ typedef enum {
  * \brief   Function prototypes.
  */
 
-void LoRaWAN_app( void );
-void TxShotgun_app( void );
+void LoRaWAN_app( uint32_t NbLoop );
+void TxShotgun_app( uint32_t NbLoop );
 void Rx_app( void );
 uint32_t TimeOnAir( uint8_t pktLen, eBandWidth bandwidth, uint8_t Datarate, uint16_t PreambleLen, bool CrcOn, bool HeaderOn, uint8_t Coderate );
 void UserIsr( void );
@@ -112,7 +112,7 @@ static bool RxTimeout = false;
 
 int main( void ) {
     uint8_t uid[8];
-    eTestApp TestApp = TEST_APP_RX;
+    eTestApp TestApp = TEST_APP_LORAWAN;
 
     /* RtcInit , WakeUpInit, LowPowerTimerLoRaInit() are Mcu dependant. */
     mcu.InitMcu( );
@@ -137,14 +137,14 @@ int main( void ) {
 
     /* Launch main application */
     switch( TestApp ) {
-        case TEST_APP_TX_SHOTGUN:
-            TxShotgun_app( );
+        case TEST_APP_TX:
+            TxShotgun_app( 10 );
             break;
         case TEST_APP_RX:
             Rx_app( );
             break;
         default:
-            LoRaWAN_app( );
+            LoRaWAN_app( 100 );
             break;
     }
 
@@ -156,7 +156,7 @@ int main( void ) {
  * \brief   LoRaWAN application
  */
 
-void LoRaWAN_app( void ) {
+void LoRaWAN_app( uint32_t NbLoop ) {
     uint8_t UserPayloadSize;
     uint8_t UserPayload[255];
     uint8_t UserRxPayloadSize;
@@ -167,6 +167,9 @@ void LoRaWAN_app( void ) {
     uint8_t AppTimeSleeping = 5;
     uint8_t AvailableRxPacket = NO_LORA_RXPACKET_AVAILABLE;
     eLoraWan_Process_States LpState = LWPSTATE_IDLE;
+
+    uint32_t NumberOfPacketSent = 0;
+    uint32_t NumberOfPacketReceived = 0;
 
     /* Lp<LoraRegionsEU>: A LoRaWan Object with Eu region's rules. */
 #ifdef SX126x_BOARD
@@ -195,59 +198,70 @@ void LoRaWAN_app( void ) {
     DEBUG_MSG("\n---------------------> Starting LoRaWAN application <-------------------------------\n");
 
     while ( 1 ) {
-        /* For this example : send an (un)confirmed message on port 3. The user payload is a ramp from 0 to 13 (14 bytes) + FW version. */
-        if ( ( Lp.IsJoined ( ) == NOT_JOINED ) && ( Lp.GetIsOtaDevice ( ) == OTA_DEVICE) ) {
-            LpState = Lp.Join( );
+        if ((NbLoop == 0) || (NbLoop > NumberOfPacketSent)) {
+            /* For this example : send an (un)confirmed message on port 3. The user payload is a ramp from 0 to 13 (14 bytes) + FW version. */
+            if ( ( Lp.IsJoined ( ) == NOT_JOINED ) && ( Lp.GetIsOtaDevice ( ) == OTA_DEVICE) ) {
+                LpState = Lp.Join( );
+            } else {
+                DEBUG_MSG("\n---------------------> Sending a NEW LoRaWAN PACKET <-------------------------------\n");
+                MsgType = CONF_DATA_UP;
+                LpState = Lp.SendPayload( UserFport, UserPayload, UserPayloadSize, MsgType );
+            }
+
+            /*
+            * This function manages the state of the MAC and performs all the computation intensive (crypto) tasks of the MAC.
+            * This function is called periodically by the user's application whenever the state of the MAC is not idle.
+            * The function is not timing critical, can be called at any time and can be interrupted by any IRQ (including the user's IRQ).
+            * The only requirement is that this function must be called at least once between the end of the transmission and the beginning of the RX1 slot.
+            * Therefore when the stack is active a call periodicity of roughly 300mSec is recommended.
+            */
+            while ( ( LpState != LWPSTATE_IDLE ) && ( LpState != LWPSTATE_ERROR ) && ( LpState != LWPSTATE_INVALID) ) {
+                LpState = Lp.LoraWanProcess( &AvailableRxPacket );
+                mcu.GotoSleepMSecond( 300 );
+            }
+
+            /* Reset if an error occured */
+            if ( LpState == LWPSTATE_ERROR ) {
+                InsertTrace ( __COUNTER__, FileId );
+                NVIC_SystemReset( );
+            }
+
+            NumberOfPacketSent += 1;
+
+            /* Is there any downlink to process ? */
+            if ( AvailableRxPacket != NO_LORA_RXPACKET_AVAILABLE ) {
+                InsertTrace ( __COUNTER__, FileId );
+                Lp.ReceivePayload( &UserRxFport, UserRxPayload, &UserRxPayloadSize );
+                DEBUG_PRINTF( "Receive on port %d an Applicative Downlink\n DATA[%d] = [ ", UserRxFport, UserRxPayloadSize );
+                for ( int i = 0; i < UserRxPayloadSize; i++ ) {
+                    DEBUG_PRINTF( "0x%.2x ", UserRxPayload[i] );
+                }
+                DEBUG_MSG( "]\n\n" );
+
+                NumberOfPacketReceived += 1;
+            }
+
+            DEBUG_PRINTF( "--> Total number of packet sent:     %u\n", NumberOfPacketSent );
+            DEBUG_PRINTF( "--> Total number of packet received: %u\n", NumberOfPacketReceived );
+
+            /*
+            * Send a Packet every 5 seconds in case of join
+            * Send a packet every AppTimeSleeping seconds in normal mode
+            */
+            if ( ( Lp.IsJoined( ) == NOT_JOINED ) && ( Lp.GetIsOtaDevice( ) == OTA_DEVICE) && ( LpState != LWPSTATE_INVALID) ) {
+                InsertTrace( __COUNTER__, FileId );
+                mcu.GotoSleepSecond( 5 );
+            } else {
+                InsertTrace( __COUNTER__, FileId );
+                mcu.GotoSleepSecond( AppTimeSleeping );
+                InsertTrace( __COUNTER__, FileId );
+            }
         } else {
-            DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
-            MsgType = CONF_DATA_UP;
-            LpState = Lp.SendPayload( UserFport, UserPayload, UserPayloadSize, MsgType );
-        }
-
-        /*
-        * This function manages the state of the MAC and performs all the computation intensive (crypto) tasks of the MAC.
-        * This function is called periodically by the user's application whenever the state of the MAC is not idle.
-        * The function is not timing critical, can be called at any time and can be interrupted by any IRQ (including the user's IRQ).
-        * The only requirement is that this function must be called at least once between the end of the transmission and the beginning of the RX1 slot.
-        * Therefore when the stack is active a call periodicity of roughly 300mSec is recommended.
-        */
-        while ( ( LpState != LWPSTATE_IDLE ) && ( LpState != LWPSTATE_ERROR ) && ( LpState != LWPSTATE_INVALID) ) {
-            LpState = Lp.LoraWanProcess( &AvailableRxPacket );
-            mcu.GotoSleepMSecond( 300 );
-        }
-
-        /* Reset if an error occured */
-        if ( LpState == LWPSTATE_ERROR ) {
-            InsertTrace ( __COUNTER__, FileId );
-            NVIC_SystemReset( );
+            mcu.mwait_ms( 100 );
         }
 
         /* Everything is OK so far... */
         mcu.WatchDogRelease( );
-
-        /* Is there any downlink to process ? */
-        if ( AvailableRxPacket != NO_LORA_RXPACKET_AVAILABLE ) {
-            InsertTrace ( __COUNTER__, FileId );
-            Lp.ReceivePayload( &UserRxFport, UserRxPayload, &UserRxPayloadSize );
-            DEBUG_PRINTF( "Receive on port %d an Applicative Downlink\n DATA[%d] = [ ", UserRxFport, UserRxPayloadSize );
-            for ( int i = 0; i < UserRxPayloadSize; i++ ) {
-                DEBUG_PRINTF( "0x%.2x ", UserRxPayload[i] );
-            }
-            DEBUG_MSG( "]\n\n\n" );
-        }
-
-        /*
-        * Send a Packet every 5 seconds in case of join
-        * Send a packet every AppTimeSleeping seconds in normal mode
-        */
-        if ( ( Lp.IsJoined( ) == NOT_JOINED ) && ( Lp.GetIsOtaDevice( ) == OTA_DEVICE) && ( LpState != LWPSTATE_INVALID) ) {
-            InsertTrace( __COUNTER__, FileId );
-            mcu.GotoSleepSecond( 5 );
-        } else {
-            InsertTrace( __COUNTER__, FileId );
-            mcu.GotoSleepSecond( AppTimeSleeping );
-            InsertTrace( __COUNTER__, FileId );
-        }
     }
 }
 
@@ -255,11 +269,16 @@ void LoRaWAN_app( void ) {
  * \brief   TX shotgun application
  */
 
-void TxShotgun_app( void ) {
-    uint8_t UserPayloadSize;
+void TxShotgun_app( uint32_t NbLoop ) {
     uint8_t UserPayload[255];
     uint32_t ToA;
-    uint8_t CurrentSF;
+    uint32_t NumberOfPacketSent = 0;
+
+    /* Tx parameters */
+    uint8_t CurrentSF = 8;
+    eBandWidth Bw = BW125;
+    uint8_t UserPayloadSize = 14;
+    int8_t Power = 0;
 
     DEBUG_MSG("\n---------------------> Starting TxShotgun application <-------------------------------\n");
 
@@ -268,7 +287,6 @@ void TxShotgun_app( void ) {
     RadioUser->Reset();
 
     /* Prepare UserPayload and User parameters */
-    UserPayloadSize = 14;
     for ( int i = 0; i < UserPayloadSize; i++ ) {
         UserPayload[i] = i;
     }
@@ -276,17 +294,21 @@ void TxShotgun_app( void ) {
 
     /* Send packets */
     while ( 1 ) {
-        DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
+        if ((NbLoop == 0) || (NbLoop > NumberOfPacketSent)) {
+            DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
+            RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, Bw, 866100000, Power );
+            ToA = TimeOnAir( UserPayloadSize, Bw, CurrentSF, 8, true, true, 1 );
 
-        CurrentSF = 7;
+            NumberOfPacketSent += 1;
+            DEBUG_PRINTF( "--> Total number of packet sent: %u\n", NumberOfPacketSent );
 
-        RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, BW125, 866100000, 0 );
-        ToA = TimeOnAir( UserPayloadSize, BW125, CurrentSF, 8, true, true, 1 );
-
-        /* Wait for packet to be sent before sending the next one */
-        mcu.mwait_ms( ToA );
-        if ( CurrentSF == 12 ) {
-            mcu.mwait_ms( 100 ); /* add some time before sending next packet, to avoid the GW to receive the next SF5 before this SF12 (processing time) */
+            /* Wait for packet to be sent before sending the next one */
+            mcu.mwait_ms( ToA );
+            if ( CurrentSF == 12 ) {
+                mcu.mwait_ms( 100 ); /* add some time before sending next packet, to avoid the GW to receive the next SF5 before this SF12 (processing time) */
+            }
+        } else {
+            mcu.mwait_ms( 100 );
         }
 
         /* Everything is OK so far... */
@@ -295,7 +317,7 @@ void TxShotgun_app( void ) {
 }
 
 /*!
- * \brief   TX shotgun application
+ * \brief   RX application
  */
 
 void Rx_app( void ) {
@@ -326,10 +348,10 @@ void Rx_app( void ) {
             mcu.WatchDogRelease( );
         }
 
+        /* Get received packet data */
         if ( PacketReceived == true ) {
             PacketReceived = false; /* reset value */
 
-            /* Get packet data */
             RadioUser->FetchPayloadLora( &UserPayloadSize, &UserPayload[0], &snr, &rssi );
             DEBUG_PRINTF( "--> Received packet with RSSI %d dBm, SNR %d dB\n", rssi, snr );
             for ( int i = 0; i < UserPayloadSize; i++ ) {
