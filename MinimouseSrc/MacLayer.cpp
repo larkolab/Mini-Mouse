@@ -304,6 +304,9 @@ template <int NBCHANNEL, class R> eRxPacketType LoraWanContainer<NBCHANNEL, R>::
                         LoRaMacPayloadDecrypt( &Phy.RxPhyPayload[FHDROFFSET + FoptsLength], MacRxPayloadSize, nwkSKey, DevAddr, 1, FcntDwn, &MacNwkPayload[0] );
                         MacNwkPayloadSize = MacRxPayloadSize;
                         RxPacketType = NWKRXPACKET ;
+#if 1 // TBC Michael
+                        AvailableRxPacketForUser = LORA_RX_PACKET_AVAILABLE;
+#endif
                     }
                 } else {
                     LoRaMacPayloadDecrypt( &Phy.RxPhyPayload[FHDROFFSET + FoptsLength], MacRxPayloadSize, appSKey, DevAddr, 1, FcntDwn, &MacRxPayload[0] );
@@ -902,10 +905,11 @@ template <int NBCHANNEL, class R> int LoraWanContainer<NBCHANNEL, R>::ExtractRxF
     uint32_t DevAddrtmp = 0 ;
     DevAddrtmp = Phy.RxPhyPayload[1] + ( Phy.RxPhyPayload[2] << 8 ) + ( Phy.RxPhyPayload[3] << 16 )+ ( Phy.RxPhyPayload[4] << 24 );
     status = (DevAddrtmp == devaddr) ? OKLORAWAN : ERRORLORAWAN;
-    FctrlRx = Phy.RxPhyPayload[5] ;
+    FctrlRx = Phy.RxPhyPayload[5];
     *FcntDwnTmp = Phy.RxPhyPayload[6] + ( Phy.RxPhyPayload[7] << 8 );
     FoptsLength = FctrlRx & 0x0F;
     memcpy(&Fopts[0], &Phy.RxPhyPayload[8], FoptsLength);
+
     // case empty payload without fport :
     if ( Phy.RxPhyPayloadSize > 8 + MICSIZE + FoptsLength){
         FportRx = Phy.RxPhyPayload[8+FoptsLength];
