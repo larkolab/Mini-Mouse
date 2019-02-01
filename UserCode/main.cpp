@@ -275,10 +275,11 @@ void TxShotgun_app( uint32_t NbLoop ) {
     uint32_t NumberOfPacketSent = 0;
 
     /* Tx parameters */
-    uint8_t CurrentSF = 8;
+    uint8_t CurrentSF = 7;
     eBandWidth Bw = BW125;
     uint8_t UserPayloadSize = 14;
     int8_t Power = 0;
+    uint32_t CurrentFreq = 866100000;
 
     DEBUG_MSG("\n---------------------> Starting TxShotgun application <-------------------------------\n");
 
@@ -296,7 +297,7 @@ void TxShotgun_app( uint32_t NbLoop ) {
     while ( 1 ) {
         if ((NbLoop == 0) || (NbLoop > NumberOfPacketSent)) {
             DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
-            RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, Bw, 866100000, Power );
+            RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, Bw, CurrentFreq, Power );
             ToA = TimeOnAir( UserPayloadSize, Bw, CurrentSF, 8, true, true, 1 );
 
             NumberOfPacketSent += 1;
@@ -326,6 +327,11 @@ void Rx_app( void ) {
     int16_t rssi, snr;
     uint32_t NumberOfPacketReceived = 0;
 
+    /* Rx parameters */
+    uint8_t CurrentSF = 7;
+    eBandWidth Bw = BW125;
+    uint32_t CurrentFreq = 866100000;
+
     DEBUG_MSG("\n---------------------> Starting Rx application <-------------------------------\n");
 
     /* Prepare hardware */
@@ -337,7 +343,7 @@ void Rx_app( void ) {
         DEBUG_MSG("\n---------------------> Waiting for a NEW PACKET <-------------------------------\n");
 
         /* Set Rx config */
-        RadioUser->RxLora( BW125, 7, 866100000, 0 ); /* infinite timeout */
+        RadioUser->RxLora( Bw, CurrentSF, CurrentFreq, 0 ); /* infinite timeout */
         while ( PacketReceived != true ) {
             mcu.mwait_ms( 1 );
             if ( RxTimeout == true ) {
