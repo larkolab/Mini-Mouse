@@ -35,44 +35,19 @@ template < class R > LoraRegionsEU<R>::LoraRegionsEU ( sLoRaWanKeys LoRaWanKeys,
     this->MacChannelIndexEnabled [0] = CHANNEL_ENABLED;
     this->MacChannelIndexEnabled [1] = CHANNEL_ENABLED;
     this->MacChannelIndexEnabled [2] = CHANNEL_ENABLED;
-    this->MacChannelIndexEnabled [3] = CHANNEL_ENABLED;
-    this->MacChannelIndexEnabled [4] = CHANNEL_ENABLED;
-    this->MacChannelIndexEnabled [5] = CHANNEL_ENABLED;
-    this->MacChannelIndexEnabled [6] = CHANNEL_ENABLED;
-    this->MacChannelIndexEnabled [7] = CHANNEL_ENABLED;
     this->MacMinDataRateChannel [0] = 0;
     this->MacMinDataRateChannel [1] = 0;
     this->MacMinDataRateChannel [2] = 0;
-    this->MacMinDataRateChannel [3] = 0;
-    this->MacMinDataRateChannel [4] = 0;
-    this->MacMinDataRateChannel [5] = 0;
-    this->MacMinDataRateChannel [6] = 0;
-    this->MacMinDataRateChannel [7] = 0;
     this->MacMaxDataRateChannel [0] = 5;
     this->MacMaxDataRateChannel [1] = 5;
     this->MacMaxDataRateChannel [2] = 5;
-    this->MacMinDataRateChannel [3] = 5;
-    this->MacMinDataRateChannel [4] = 5;
-    this->MacMinDataRateChannel [5] = 5;
-    this->MacMinDataRateChannel [6] = 5;
-    this->MacMinDataRateChannel [7] = 5;
-    this->MacTxFrequency[0]    = 866100000;
-    this->MacTxFrequency[1]    = 866300000;
-    this->MacTxFrequency[2]    = 866500000;
-    this->MacTxFrequency[3]    = 865100000;
-    this->MacTxFrequency[4]    = 865300000;
-    this->MacTxFrequency[5]    = 865500000;
-    this->MacTxFrequency[6]    = 865700000;
-    this->MacTxFrequency[7]    = 865900000;
+    this->MacTxFrequency[0]    = 868100000;
+    this->MacTxFrequency[1]    = 868300000;
+    this->MacTxFrequency[2]    = 868500000;
     this->MacRx1Frequency[0]   = this->MacTxFrequency[0];
     this->MacRx1Frequency[1]   = this->MacTxFrequency[1];
     this->MacRx1Frequency[2]   = this->MacTxFrequency[2];
-    this->MacRx1Frequency[3]   = this->MacTxFrequency[3];
-    this->MacRx1Frequency[4]   = this->MacTxFrequency[4];
-    this->MacRx1Frequency[5]   = this->MacTxFrequency[5];
-    this->MacRx1Frequency[6]   = this->MacTxFrequency[6];
-    this->MacRx1Frequency[7]   = this->MacTxFrequency[7];
-    this->MacRx2Frequency      = 863525000;
+    this->MacRx2Frequency      = 869525000;
     this->MacTxPower           = TX_POWER;
     this->MacRx1DataRateOffset = 0;
     this->MacRx2DataRate       = RX2DR_INIT;
@@ -566,13 +541,13 @@ template < class R >void LoraRegionsEU<R>::RegionSetBadCrcInFlash ( void ){
 template < class R >void LoraRegionsEU<R>:: TxDataRateToSfBw ( uint8_t dataRate ) {
     InsertTrace ( __COUNTER__, FileId );
     this->MacTxModulationCurrent = LORA ;
-    if ( dataRate < 8 ){
+    if ( dataRate < 6 ){
         this->MacTxSfCurrent = 12 - dataRate ;
         this->MacTxBwCurrent = BW125 ;
-    } else if ( dataRate == 8 ){
+    } else if ( dataRate == 6 ){
         this->MacTxSfCurrent = 7;
         this->MacTxBwCurrent = BW250 ;}
-    else if ( dataRate == 9 ) {
+    else if ( dataRate == 7 ) {
         this->MacTxModulationCurrent = FSK ;
     } else {
         this->MacTxSfCurrent = 12 ;
@@ -582,13 +557,13 @@ template < class R >void LoraRegionsEU<R>:: TxDataRateToSfBw ( uint8_t dataRate 
 }
 template < class R >void LoraRegionsEU<R>:: Rx2DataRateToSfBw ( uint8_t dataRate ) {
     InsertTrace ( __COUNTER__, FileId );
-    if ( dataRate < 8 ){
+    if ( dataRate < 6 ){
         this->MacRx2SfCurrent = 12 - dataRate ;
         this->MacRx2BwCurrent = BW125 ;
-    } else if ( dataRate == 8 ){
+    } else if ( dataRate == 6 ){
         this->MacRx2SfCurrent = 7;
         this->MacRx2BwCurrent = BW250 ;}
-    else if ( dataRate == 9 ) {
+    else if ( dataRate == 7 ) {
         this->MacRx2ModulationTypeCurrent = FSK;
         //@note tbd manage fsk case }
     }

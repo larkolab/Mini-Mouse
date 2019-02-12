@@ -61,16 +61,17 @@ ifeq ($(BOARD_MURATA), 0)
     CPP_SOURCES +=  \
     McuApi/STM32/SrcStm32/stm32l4xx_it.cpp \
     McuApi/STM32/SrcStm32/stm32l4xx_hal_msp.cpp\
-	McuApi/ClassSTM32L4.cpp 
+	McuApi/ClassSTM32L4.cpp
 else
     CPP_SOURCES +=  \
     McuApi/STM32/SrcStm32/stm32l0xx_it.cpp \
     McuApi/STM32/SrcStm32/stm32l0xx_hal_msp.cpp\
-	McuApi/ClassSTM32L072.cpp  
+	McuApi/ClassSTM32L072.cpp
 endif
 
 ifeq ($(BOARD_MURATA), 0)
 C_SOURCES = \
+UserCode/tinymt32.c \
 McuApi/STM32/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c.c \
 McuApi/STM32/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_i2c_ex.c \
 McuApi/STM32/Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_lptim.c \
@@ -153,7 +154,7 @@ SZ = $(PREFIX)size
 endif
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
- 
+
 #######################################
 # CFLAGS
 #######################################
@@ -176,14 +177,14 @@ MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
 # macros for gcc
 # AS defines
-AS_DEFS = 
+AS_DEFS =
 
 # C defines
 ifeq ($(BOARD_MURATA), 0)
     C_DEFS =  \
     -DUSE_HAL_DRIVER \
     -DSTM32L476xx\
-    -DSX126x_BOARD 
+    -DSX126x_BOARD
 else
     C_DEFS =  \
     -DUSE_HAL_DRIVER \
@@ -193,19 +194,19 @@ else
 endif
 
 ifeq ($(RADIO_SX1276 ), 1)
-    C_DEFS += -DSX1276_BOARD  
+    C_DEFS += -DSX1276_BOARD
 endif
 ifeq ($(RADIO_SX1272 ), 1)
-    C_DEFS += -DSX1272_BOARD  
+    C_DEFS += -DSX1272_BOARD
 endif
 ifeq ($(RADIO_SX126x ), 1)
-    C_DEFS += -DSX126x_BOARD  
+    C_DEFS += -DSX126x_BOARD
 endif
 ifeq ($(BOARD_L4), 1)
-    C_DEFS += -DBOARD_L4  
+    C_DEFS += -DBOARD_L4
 endif
 # AS includes
-AS_INCLUDES = 
+AS_INCLUDES =
 
 # C includesOBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(C_SOURCES:.c=.o)))
 vpath %.c $(sort $(dir $(C_SOURCES)))
@@ -266,7 +267,7 @@ endif
 LIBS =   -lstdc++ -lsupc++ -lm -lc -lnosys
 
 
-LIBDIR = 
+LIBDIR =
 LDFLAGS = $(MCU) --specs=nano.specs -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections
 
 # default action: build all
@@ -286,10 +287,10 @@ vpath %.cpp $(sort $(dir $(CPP_SOURCES)))
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
-$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
 	$(CPP) -c $(CPPFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
@@ -301,19 +302,19 @@ $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
 
 $(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 	$(HEX) $< $@
-	
+
 $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
-	$(BIN) $< $@	
-	
+	$(BIN) $< $@
+
 $(BUILD_DIR):
-	mkdir $@		
+	mkdir $@
 
 #######################################
 # clean up
 #######################################
 clean:
 	-rm -fR $(BUILD_DIR)
-  
+
 #######################################
 # dependencies
 #######################################

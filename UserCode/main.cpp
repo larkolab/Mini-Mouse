@@ -32,6 +32,7 @@ Maintainer        : Fabien Holin (SEMTECH)
 #include "UserDefine.h"
 #include "ApiMcu.h"
 
+#include "tinymt32.h"
 
 #define FileId 4
 
@@ -75,10 +76,45 @@ struct sBackUpFlash BackUpFlash;
 uint8_t LoRaMacNwkSKeyInit[]      = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
 uint8_t LoRaMacAppSKeyInit[]      = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
 uint8_t LoRaMacAppKeyInit[]       = { 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0xBB };
-uint8_t AppEuiInit[]              = { 0x70, 0xb3, 0xd5, 0x7e, 0xd0, 0x00, 0xff, 0x50 };
+uint8_t AppEuiInit[]              = { 0x70, 0xb3, 0xd5, 0x7e, 0xd0, 0x01, 0x6c, 0xf6 };
 uint8_t DevEuiInit[]              = { 0x38, 0x35, 0x31, 0x31, 0x18, 0x47, 0x37, 0x31 };
-uint32_t LoRaDevAddrInit          = 0xB0CAD001;
+#if 1
+uint32_t LoRaDevAddrInit          = 0xB0CAD002;
+#else
+uint32_t LoRaDevAddrInit          = 0x260114A0;
+#endif
 sLoRaWanKeys LoraWanKeys = { LoRaMacNwkSKeyInit, LoRaMacAppSKeyInit, LoRaMacAppKeyInit, AppEuiInit, DevEuiInit, LoRaDevAddrInit, APB_DEVICE };
+
+typedef struct {
+    uint8_t uid[8];
+    uint32_t mote_id;
+    uint32_t freq_hz;
+    uint8_t datarate;   /* 0 means all SF */
+    int8_t power;
+    uint8_t size;       /* 0 means random */
+    uint32_t nb_loop;   /* 0 means infinite */
+} sMoteDescription;
+
+static sMoteDescription Motes[2] = {
+    {
+        .uid = { 0x48, 0x34, 0x50, 0x05, 0x00, 0x39, 0x00, 0x33 },
+        .mote_id = 0xB0CAD001,
+        .freq_hz = 866300000,
+        .datarate = 5,
+        .power = 0,
+        .size = 32,
+        .nb_loop = 10
+    },
+    {
+        .uid = { 0x4E, 0x34, 0x50, 0x10, 0x00, 0x37, 0x00, 0x58 },
+        .mote_id = 0xB0CAD002,
+        .freq_hz = 866300000,
+        .datarate = 7,
+        .power = -3,
+        .size = 32,
+        .nb_loop = 10
+    }
+};
 
 /*!
  * \brief   Tets application enum
@@ -94,7 +130,7 @@ typedef enum {
  */
 
 void LoRaWAN_app( uint32_t NbLoop );
-void TxShotgun_app( uint32_t NbLoop );
+void TxShotgun_app( sMoteDescription * Mote );
 void Rx_app( void );
 uint32_t TimeOnAir( uint8_t pktLen, eBandWidth bandwidth, uint8_t Datarate, uint16_t PreambleLen, bool CrcOn, bool HeaderOn, uint8_t Coderate );
 void UserIsr( void );
@@ -111,8 +147,9 @@ static bool RxTimeout = false;
  */
 
 int main( void ) {
+    int mote_idx = 0;
     uint8_t uid[8];
-    eTestApp TestApp = TEST_APP_LORAWAN;
+    eTestApp TestApp = TEST_APP_TX;
 
     /* RtcInit , WakeUpInit, LowPowerTimerLoRaInit() are Mcu dependant. */
     mcu.InitMcu( );
@@ -138,13 +175,26 @@ int main( void ) {
     /* Launch main application */
     switch( TestApp ) {
         case TEST_APP_TX:
-            TxShotgun_app( 100 );
+            /* Select mote description based on Unique ID */
+            for( int i = 0; i < (int)(sizeof Motes); i++ ) {
+                if( memcmp(uid, Motes[i].uid, sizeof uid) == 0 ) {
+                    DEBUG_PRINTF( "Selecting Mote %d: 0x%08X SF%u Freq:%u\n", i, Motes[i].mote_id, Motes[i].datarate, Motes[i].freq_hz );
+                    mote_idx = i;
+                    break;
+                }
+                if( i == sizeof Motes ) {
+                    DEBUG_MSG( "ERROR: device unknown\n" );
+                    return 0;
+                }
+            }
+            /* Run test */
+            TxShotgun_app( &Motes[mote_idx] );
             break;
         case TEST_APP_RX:
             Rx_app( );
             break;
         default:
-            LoRaWAN_app( 100 );
+            LoRaWAN_app( 0 );
             break;
     }
 
@@ -192,7 +242,7 @@ void LoRaWAN_app( uint32_t NbLoop ) {
 #if 0
     Lp.RestoreContext  ( );
 #endif
-    Lp.SetDataRateStrategy( USER_DR_DISTRIBUTION );
+    Lp.SetDataRateStrategy( STATIC_ADR_MODE );
     Lp.NewJoin();
 
     DEBUG_MSG("\n---------------------> Starting LoRaWAN application <-------------------------------\n");
@@ -269,34 +319,67 @@ void LoRaWAN_app( uint32_t NbLoop ) {
  * \brief   TX shotgun application
  */
 
-void TxShotgun_app( uint32_t NbLoop ) {
+void TxShotgun_app( sMoteDescription * Mote ) {
     uint8_t UserPayload[255];
     uint32_t ToA;
     uint32_t NumberOfPacketSent = 0;
+    uint8_t UserPayloadSize;
+    uint8_t CurrentSF;
+    eBandWidth Bw;
 
     /* Tx parameters */
-    uint8_t CurrentSF = 7;
-    eBandWidth Bw = BW125;
-    uint8_t UserPayloadSize = 14;
-    int8_t Power = 0;
-    uint32_t CurrentFreq = 866100000;
+    int8_t Power = Mote->power;
+    uint32_t CurrentFreq = Mote->freq_hz;
 
-    DEBUG_MSG("\n---------------------> Starting TxShotgun application <-------------------------------\n");
+    DEBUG_MSG( "\n---------------------> Starting TxShotgun application <-------------------------------\n" );
+
+    /* Initialize pseudo-random generator */
+    tinymt32_t tinymt;
+    tinymt.mat1 = 0x8f7011ee;
+    tinymt.mat2 = 0xfc78ff1f;
+    tinymt.tmat = 0x3793fdff;
 
     /* Prepare hardware */
     mcu.AttachInterruptIn( &UserIsr );
     RadioUser->Reset();
 
-    /* Prepare UserPayload and User parameters */
-    for ( int i = 0; i < UserPayloadSize; i++ ) {
-        UserPayload[i] = i;
-    }
-    UserPayload[0] = FW_VERSION;
-
     /* Send packets */
     while ( 1 ) {
-        if ((NbLoop == 0) || (NbLoop > NumberOfPacketSent)) {
-            DEBUG_MSG("\n---------------------> Sending a NEW PACKET <-------------------------------\n");
+        if ( (Mote->nb_loop == 0) || (Mote->nb_loop > NumberOfPacketSent) ) {
+            /* Prepare packet pseudo-random payload */
+            tinymt32_init(&tinymt, (int)NumberOfPacketSent);
+            UserPayload[0] = (uint8_t)(Mote->mote_id >> 24);
+            UserPayload[1] = (uint8_t)(Mote->mote_id >> 16);
+            UserPayload[2] = (uint8_t)(Mote->mote_id >> 8);
+            UserPayload[3] = (uint8_t)(Mote->mote_id >> 0);
+            UserPayload[4] = (uint8_t)(NumberOfPacketSent >> 24);
+            UserPayload[5] = (uint8_t)(NumberOfPacketSent >> 16);
+            UserPayload[6] = (uint8_t)(NumberOfPacketSent >> 8);
+            UserPayload[7] = (uint8_t)(NumberOfPacketSent >> 0);
+
+            UserPayloadSize = (uint8_t)tinymt32_generate_uint32(&tinymt); /* pseudo-random size */
+            if (UserPayloadSize < 8) {
+                UserPayloadSize = 8; /* minimum size */
+            }
+
+            /* overload random size with given one */
+            if( Mote->size != 0 ) {
+                UserPayloadSize = Mote->size;
+            }
+
+            for( int i = 8; i < (int)UserPayloadSize; i++ ) {
+                UserPayload[i] = (uint8_t)tinymt32_generate_uint32(&tinymt);
+            }
+
+            /* Set modulation parameters */
+            if( Mote->datarate != 0 ) {
+                CurrentSF = Mote->datarate;
+            } else {
+                CurrentSF = NumberOfPacketSent%8 + 5;
+            }
+            Bw = BW125;
+
+            DEBUG_PRINTF( "\n---------------------> Sending a NEW PACKET (%u SF%u sz:%u) <-------------------------------\n", CurrentFreq, CurrentSF, UserPayloadSize );
             RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, Bw, CurrentFreq, Power );
             ToA = TimeOnAir( UserPayloadSize, Bw, CurrentSF, 8, true, true, 1 );
 
