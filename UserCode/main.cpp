@@ -91,8 +91,9 @@ typedef struct {
     uint32_t freq_hz;
     uint8_t datarate;   /* 0 means all SF */
     int8_t power;
-    uint8_t size;       /* 0 means random */
-    uint32_t nb_loop;   /* 0 means infinite */
+    uint8_t size;       /* 0 means random size */
+    uint32_t nb_loop;   /* 0 meanws infinite */
+    bool size_all;      /* if true, will test all possible sizes from 0 to 255 (.size is ignored) */
 } sMoteDescription;
 
 static sMoteDescription Motes[2] = {
@@ -100,19 +101,21 @@ static sMoteDescription Motes[2] = {
         .uid = { 0x48, 0x34, 0x50, 0x05, 0x00, 0x39, 0x00, 0x33 },
         .mote_id = 0xB0CAD001,
         .freq_hz = 866300000,
-        .datarate = 5,
+        .datarate = 6,
         .power = 0,
-        .size = 32,
-        .nb_loop = 10
+        .size = 12,
+        .nb_loop = 10,
+        .size_all = false
     },
     {
         .uid = { 0x4E, 0x34, 0x50, 0x10, 0x00, 0x37, 0x00, 0x58 },
         .mote_id = 0xB0CAD002,
         .freq_hz = 866300000,
-        .datarate = 7,
-        .power = -3,
+        .datarate = 10,
+        .power = 0,
         .size = 32,
-        .nb_loop = 10
+        .nb_loop = 200,
+        .size_all = false
     }
 };
 
@@ -358,16 +361,22 @@ void TxShotgun_app( sMoteDescription * Mote ) {
             UserPayload[6] = (uint8_t)(NumberOfPacketSent >> 8);
             UserPayload[7] = (uint8_t)(NumberOfPacketSent >> 0);
 
+            /* pseudo - random size */
             UserPayloadSize = (uint8_t)tinymt32_generate_uint32(&tinymt); /* pseudo-random size */
             if (UserPayloadSize < 8) {
                 UserPayloadSize = 8; /* minimum size */
             }
 
-            /* overload random size with given one */
-            if( Mote->size != 0 ) {
-                UserPayloadSize = Mote->size;
+            /* overload pseudo random size with given one */
+            if( Mote->size_all == true ) {
+                UserPayloadSize = NumberOfPacketSent % 256;
+            } else {
+                if( Mote->size != 0 ) {
+                    UserPayloadSize = Mote->size;
+                }
             }
 
+            /* pseudo - random payload */
             for( int i = 8; i < (int)UserPayloadSize; i++ ) {
                 UserPayload[i] = (uint8_t)tinymt32_generate_uint32(&tinymt);
             }
@@ -380,7 +389,7 @@ void TxShotgun_app( sMoteDescription * Mote ) {
             }
             Bw = BW125;
 
-            DEBUG_PRINTF( "\n---------------------> Sending a NEW PACKET (%u SF%u sz:%u) <-------------------------------\n", CurrentFreq, CurrentSF, UserPayloadSize );
+            DEBUG_PRINTF( "\n---------------------> Sending a NEW PACKET (%u SF%u sz:%u %d dBm) <-------------------------------\n", CurrentFreq, CurrentSF, UserPayloadSize, Power );
             RadioUser->SendLora( &UserPayload[0], UserPayloadSize, CurrentSF, Bw, CurrentFreq, Power );
             ToA = TimeOnAir( UserPayloadSize, Bw, CurrentSF, 8, true, true, 1 );
 
