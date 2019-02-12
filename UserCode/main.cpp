@@ -147,6 +147,7 @@ static bool RxTimeout = false;
  */
 
 int main( void ) {
+    int i;
     int mote_idx = 0;
     uint8_t uid[8];
     eTestApp TestApp = TEST_APP_TX;
@@ -176,17 +177,17 @@ int main( void ) {
     switch( TestApp ) {
         case TEST_APP_TX:
             /* Select mote description based on Unique ID */
-            for( int i = 0; i < (int)(sizeof Motes); i++ ) {
+            for( i = 0; i < (int)(sizeof Motes); i++ ) {
                 if( memcmp(uid, Motes[i].uid, sizeof uid) == 0 ) {
-                    DEBUG_PRINTF( "Selecting Mote %d: 0x%08X SF%u Freq:%u\n", i, Motes[i].mote_id, Motes[i].datarate, Motes[i].freq_hz );
                     mote_idx = i;
                     break;
                 }
-                if( i == sizeof Motes ) {
-                    DEBUG_MSG( "ERROR: device unknown\n" );
-                    return 0;
-                }
             }
+            if( i == sizeof Motes ) {
+                DEBUG_MSG( "ERROR: device unknown\n" );
+                return 0;
+            }
+            DEBUG_PRINTF( "Selecting Mote %d: 0x%08X SF%u Freq:%u\n", mote_idx, Motes[mote_idx].mote_id, Motes[mote_idx].datarate, Motes[mote_idx].freq_hz );
             /* Run test */
             TxShotgun_app( &Motes[mote_idx] );
             break;
