@@ -31,6 +31,9 @@ Maintainer        : Olivier Gimenez (SEMTECH)
 
 
 SX1272::SX1272( PinName nss, PinName reset, PinName TxRxIt, PinName RxTimeOutIt) : pinCS( nss ), pinReset( reset ){
+    mcu.InitGpioOut ( pinCS );
+    mcu.InitGpioOut ( pinReset );
+
     mcu.SetValueDigitalOutPin ( pinCS, 1);
     mcu.Init_Irq ( TxRxIt ) ;
     mcu.Init_Irq ( RxTimeOutIt ) ;

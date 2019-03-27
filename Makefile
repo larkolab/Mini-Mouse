@@ -18,7 +18,7 @@ TARGET = MiniMouse
 BOARD_MURATA = 0
 BOARD_L4     = 1
 RADIO_SX1276 = 0
-RADIO_SX1272 = 0
+RADIO_SX1272 = 1
 RADIO_SX126x = 1
 ####################SX126x_BOARD
 # building variablesSX126x_BOARD
@@ -183,8 +183,7 @@ AS_DEFS =
 ifeq ($(BOARD_MURATA), 0)
     C_DEFS =  \
     -DUSE_HAL_DRIVER \
-    -DSTM32L476xx\
-    -DSX126x_BOARD
+    -DSTM32L476xx
 else
     C_DEFS =  \
     -DUSE_HAL_DRIVER \

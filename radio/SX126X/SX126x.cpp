@@ -52,6 +52,8 @@ SX126x::SX126x( PinName Busy, PinName nss, PinName reset, PinName Interrupt ):
 pinBusy( Busy ),
 pinReset( reset ),
 pinCS( nss ) {
+    mcu.InitGpioOut ( pinCS );
+    mcu.InitGpioOut ( pinReset );
     mcu. InitGpioIn ( pinBusy );
     mcu.SetValueDigitalOutPin ( pinCS, 1);
     mcu.Init_Irq ( Interrupt ) ;

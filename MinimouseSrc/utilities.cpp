@@ -266,6 +266,7 @@ void Crc64(uint8_t *dataIn, int size,uint32_t * crcLow, uint32_t * crcHigh )
     *crcHigh = (crc >> 32) & 0xffffffff ; 
 }
 
+#if 0
 #ifdef SX126x_BOARD 
     int  Certification ( bool NewCommand , uint8_t * UserFport , uint8_t * UserPayloadSize, uint8_t * UserRxPayloadSize, uint8_t * MsgType, uint8_t * UserRxPayload, uint8_t * UserPayload, LoraWanObject< LoraRegionsEU, SX126x > *Lp){
 #endif
@@ -341,7 +342,7 @@ void Crc64(uint8_t *dataIn, int size,uint32_t * crcLow, uint32_t * crcHigh )
     }
     return ( UserRxPayload[0] );
 }
-
+#endif
 
 sLoRaWanKeys DeriveKeyForTest ( uint8_t * uid, uint32_t devaddr ){
     uint8_t LoRaMacNwkSKeyInit[] = { 0x22, 0x33, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};

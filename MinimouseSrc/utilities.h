@@ -101,6 +101,7 @@ int8_t Nibble2HexChar( uint8_t a );
  * \brief Certification apllication layer
  *
  */
+#if 0
 #ifdef SX126x_BOARD 
     int  Certification ( bool NewCommand , uint8_t * UserFport , uint8_t * UserPayloadSize, uint8_t * UserRxPayloadSize, uint8_t * MsgType, uint8_t * UserRxPayload, uint8_t * UserPayload, LoraWanObject< LoraRegionsEU, SX126x > *Lp);
 #endif
@@ -110,7 +111,7 @@ int8_t Nibble2HexChar( uint8_t a );
 #ifdef SX1276_BOARD  
     int  Certification ( bool NewCommand , uint8_t * UserFport , uint8_t * UserPayloadSize, uint8_t * UserRxPayloadSize, uint8_t * MsgType, uint8_t * UserRxPayload, uint8_t * UserPayload, LoraWanObject< LoraRegionsEU, SX1276 > *Lp);
 #endif
-
+#endif
 /*!
  * \brief Crc64 implementation for flash corruption
  *
